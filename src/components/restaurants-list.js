@@ -10,6 +10,7 @@ const RestaurantsList = (props) => {
   const [cuisines, setCuisines] = useState(['All Cuisines']);
   const [page, setPage] = useState(0);
   const [perPage, setPerPage] = useState(20);
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     retrieveRestaurants();
@@ -28,7 +29,7 @@ const RestaurantsList = (props) => {
 
   const onChangeSearchCuisine = e => {
     const searchCuisine = e.target.value;
-    setSearchZip(searchCuisine);
+    setSearchCuisine(searchCuisine);
   }
 
   const retrieveRestaurants = () => {
@@ -38,8 +39,8 @@ const RestaurantsList = (props) => {
     if (searchName) query.name = searchName;
     RestaurantDataService.getByQuery(query)
       .then(res => {
-        console.log(res.data);
         setRestaurants(res.data.restaurants);
+        setTotalCount(res.data.total_result);
       })
       .catch(e => { console.log(e)})
   }
@@ -47,8 +48,7 @@ const RestaurantsList = (props) => {
   const retrieveCuisines = () => {
     RestaurantDataService.getCuisines()
       .then(res => {
-        // console.log(res.data);
-        setRestaurants(['All Cuisines', ...res.data]);
+        setCuisines(['All Cuisines', ...res.data]);
       })
       .catch(e => { console.log(e)})
   }
@@ -57,13 +57,34 @@ const RestaurantsList = (props) => {
     retrieveCuisines();
   }
 
+  const previousPage = () => {
+    if (page > 0) {
+      setPage(page - 1);
+      retrieveRestaurants();
+    }
+  }
+
+  const nextPage = () => {
+    const maxPage = Math.ceil(totalCount / perPage) - 1;
+    if (page < maxPage) {
+      setPage(page + 1);
+      retrieveRestaurants();
+    }
+  }
+
   const find = (query, by) => {
+    setPage(0);
     RestaurantDataService.find(query, by, page, perPage)
       .then(res => {
-        console.log(res.data);
         setRestaurants(res.data.restaurants);
+        setTotalCount(res.data.total_result);
       })
-      .catch(e => { console.log(e)})
+      .catch(e => { console.log(e) });
+  }
+
+  const findByAll = () => {
+    setPage(0);
+    retrieveRestaurants();
   }
 
   const findByName = () => {
@@ -75,7 +96,7 @@ const RestaurantsList = (props) => {
   }
 
   const findByCuisine = () => {
-    if (searchCuisine == 'All Cuisines') {
+    if (searchCuisine === 'All Cuisines') {
       refreshList();
     } else {
       find(searchCuisine, 'cuisine');
@@ -105,11 +126,11 @@ const RestaurantsList = (props) => {
             value={searchZip}
             onChange={onChangeSearchZip}
           />
-        </div>
-        <div className='input-group-append'>
-          <button className='btn btn-outline-secondary' type='button' onClick={findByZip}>
-            Search
-          </button>
+          <div className='input-group-append'>
+            <button className='btn btn-outline-secondary' type='button' onClick={findByZip}>
+              Search
+            </button>
+          </div>
         </div>
         <div className='input-group col-lg-4'>
           <select onChange={onChangeSearchCuisine}>
@@ -126,12 +147,32 @@ const RestaurantsList = (props) => {
           </div>
         </div>
       </div>
+      <div className='row pb-1'>
+        <div className='input-group col-lg-6'>
+          <button className='btn btn-outline-secondary' type='button' onClick={findByAll}>
+            {`Search by Name -> ${searchName || 'All names'}, & zipcode -> ${searchZip || 'All'}, & Cuisine -> ${searchCuisine || 'All cuisines'}`}
+          </button>
+        </div>
+        <div className='input-group col-lg-2'>
+            {`Current Page: ${page + 1}`}
+        </div>
+        <div className='input-group col-lg-2'>
+            {`Total count: ${totalCount}`}
+        </div>
+        <div className='input-group col-lg-2'>
+          <button className='btn btn-outline-secondary' type='button' onClick={previousPage}>
+            {'<--- '}
+          </button>
+          <button className='btn btn-outline-secondary' type='button' onClick={nextPage}>
+            {'--->'}
+          </button>
+        </div>
+      </div>
       <div className='row'>
         {restaurants.map(restaurant => {
           let address = ''
-          console.log(restaurant.address)
           if (restaurant.address) {
-            address = `${restaurant.address.building} ${restaurant.address.street}, ${restaurant.zipcode}`
+            address = `${restaurant.address.building} ${restaurant.address.street}, ${restaurant.address.zipcode}`
           }
           return (
             <div className='col-lg-4 pb-1' key={restaurant._id}>
@@ -143,14 +184,14 @@ const RestaurantsList = (props) => {
                     <strong>Address: </strong>{address}
                   </p>
                   <div className='row'>
-                    <Link to={'/restaurants/'+restaurant._id} 
+                    <Link to={`/restaurants/${restaurant._id}`} 
                       className='btn btn-primary col-lg-5 mx-1 mb-1'>
                       View Reviews
                     </Link>
                     <a 
                       target="_blank" 
                       rel="noreferrer"
-                      href={'https://www.google.com/maps/place' + address}
+                      href={'https://www.google.com/maps/place/' + address}
                       className='btn btn-primary col-lg-5 mx-1 mb-1'
                     >
                       View map

@@ -39,7 +39,7 @@ class RestaurantDataService {
   }
 
   deleteReview(data) {
-    return http.delete('/review', data);
+    return http.delete('/review', { data });
   }
 }
 
